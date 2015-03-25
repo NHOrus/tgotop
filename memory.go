@@ -1,4 +1,7 @@
-// memory
+// memory services for Linux
+
+// +build !windows
+
 package main
 
 import (
