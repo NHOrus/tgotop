@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-const mibsize uint64 = 1024 * 1024
+const DIV uint64 = 1024 * 1024 //What to change bytes to: this case, Mibibytes
 
-func main() {
+func notmain() {
 	err := ui.Init()
 	if err != nil {
 		panic(err)
@@ -43,10 +43,10 @@ func main() {
 		}
 
 		gMem.Percent = m.memPercent
-		gMem.Border.Label = fmt.Sprintf("Memory used: %d / %d MiB", m.memUse/mibsize, m.memTotal/mibsize)
+		gMem.Border.Label = fmt.Sprintf("Memory used: %d / %d MiB", m.memUse/DIV, m.memTotal/DIV)
 
 		gSwap.Percent = m.swapPercent
-		gSwap.Border.Label = fmt.Sprintf("Swap used: %d / %d MiB", m.swapUse/mibsize, m.swapTotal/mibsize)
+		gSwap.Border.Label = fmt.Sprintf("Swap used: %d / %d MiB", m.swapUse/DIV, m.swapTotal/DIV)
 		ui.Render(ui.Body)
 	}
 
