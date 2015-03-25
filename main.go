@@ -2,10 +2,13 @@
 package main
 
 import (
+	"fmt"
 	ui "github.com/gizak/termui"
 	tm "github.com/nsf/termbox-go"
 	"time"
 )
+
+const mibsize uint64 = 1024 * 1024
 
 func main() {
 	err := ui.Init()
@@ -39,8 +42,10 @@ func main() {
 		}
 
 		gMem.Percent = m.memPercent
-		gSwap.Percent = m.swapPercent
+		gMem.Border.Label = fmt.Sprintf("Memory used: %d / %d MiB", m.memUse/mibsize, m.memTotal/mibsize)
 
+		gSwap.Percent = m.swapPercent
+		gSwap.Border.Label = fmt.Sprintf("Swap used: %d / %d MiB", m.swapUse/mibsize, m.swapTotal/mibsize)
 		ui.Render(ui.Body)
 	}
 
@@ -62,7 +67,7 @@ func main() {
 				ui.Body.Align()
 			}
 		default:
-			draw()
+			go draw()
 			time.Sleep(time.Second / 2)
 		}
 	}
