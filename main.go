@@ -2,7 +2,6 @@
 package main
 
 import (
-	//	proc "github.com/cespare/goproc"
 	ui "github.com/gizak/termui"
 	tm "github.com/nsf/termbox-go"
 	// "time"
@@ -15,6 +14,9 @@ func main() {
 	}
 	defer ui.Close()
 
+	qMess := ui.NewPar(":PRESS q TO QUIT")
+	qMess.Height = 3
+
 	//getting ready to close stuff on command
 	evt := make(chan tm.Event)
 	go func() {
@@ -22,6 +24,15 @@ func main() {
 			evt <- tm.PollEvent()
 		}
 	}()
+
+	draw := func() {
+		ui.Render(qMess)
+	}
+
+	ui.Body.AddRows(
+		ui.NewRow(ui.NewCol(12, 0, qMess)))
+
+	ui.Body.Align()
 
 	for {
 		select {
@@ -34,7 +45,7 @@ func main() {
 				ui.Body.Align()
 			}
 		default:
-			//	draw(i)
+			draw()
 		}
 	}
 }
