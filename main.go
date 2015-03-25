@@ -9,7 +9,8 @@ import (
 	"time"
 )
 
-const DIV uint64 = 1024 * 1024 //What to change bytes to: this case, Mibibytes
+//DIV is size of divider, in this case - MiB
+const DIV uint64 = 1024 * 1024
 
 func main() {
 	err := ui.Init()
