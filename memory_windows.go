@@ -35,16 +35,12 @@ type MEMORYSTATUSEX struct {
 var (
 	kernel32    = syscall.NewLazyDLL("kernel32.dll")
 	globMemStat = kernel32.NewProc("GlobalMemoryStatusEx")
-	calledMem   *MEMORYSTATUSEX
+	calledMem   MEMORYSTATUSEX
 )
 
-func init() {
-	calledMem := new(MEMORYSTATUSEX)
-	calledMem.dwLen = uint32(unsafe.Sizeof(calledMem))
-}
-
 func callforMem() {
-	ret, _, callErr := syscall.Syscall(globMemStat.Addr(), uintptr(unsafe.Pointer(calledMem)), 0, 0, 0)
+	calledMem.dwLen = uint32(unsafe.Sizeof(calledMem))
+	ret, _, callErr := syscall.Syscall(globMemStat.Addr(), 1, uintptr(unsafe.Pointer(&calledMem)), 0, 0)
 	if ret == 0 {
 		panic(fmt.Sprintf("%s failed: %v", "GlobalMemoryStatusEx", callErr))
 	}
@@ -53,20 +49,15 @@ func callforMem() {
 func (m *memData) Update() error {
 	callforMem()
 
-	m.memTotal = (*calledMem).ullTotalPhys
-	m.memFree = (*calledMem).ullAvailPhys
+	m.memTotal = calledMem.ullTotalPhys
+	m.memFree = calledMem.ullAvailPhys
 	m.memUse = m.memTotal - m.memFree
 	m.memPercent = int(m.memUse * 100 / m.memTotal)
 
-	m.swapTotal = (*calledMem).ullTotalPageFile
-	m.swapFree = (*calledMem).ullAvailPageFile
+	m.swapTotal = calledMem.ullTotalPageFile
+	m.swapFree = calledMem.ullAvailPageFile
 	m.swapUse = m.swapTotal - m.swapFree
 	m.swapPercent = int(m.swapUse * 100 / m.swapTotal)
 
 	return nil
-}
-
-func main() {
-	var m memData
-	m.Update()
 }

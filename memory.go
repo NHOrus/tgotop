@@ -1,4 +1,4 @@
-// memory services for Linux
+// memory services for Linux and *BSD with enabled /proc
 
 // +build !windows
 

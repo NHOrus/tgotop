@@ -11,7 +11,7 @@ import (
 
 const DIV uint64 = 1024 * 1024 //What to change bytes to: this case, Mibibytes
 
-func notmain() {
+func main() {
 	err := ui.Init()
 	if err != nil {
 		panic(err)
