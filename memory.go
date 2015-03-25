@@ -8,10 +8,10 @@ import (
 type memData struct {
 	memTotal    uint64
 	memFree     uint64
-	memPercent  float64
+	memPercent  int
 	swapTotal   uint64
 	swapFree    uint64
-	swapPercent float64
+	swapPercent int
 }
 
 func (m *memData) Update() error {
@@ -21,11 +21,11 @@ func (m *memData) Update() error {
 	}
 	m.memTotal = t["MemTotal"]
 	m.memFree = t["MemFree"]
-	m.memPercent = float64((m.memTotal - m.memFree) / m.memTotal)
+	m.memPercent = int((m.memTotal - m.memFree) * 100 / m.memTotal)
 
 	m.swapTotal = t["SwapTotal"]
 	m.swapFree = t["SwapFree"]
-	m.swapPercent = float64((m.swapTotal - m.swapFree) / m.swapTotal)
+	m.swapPercent = int((m.swapTotal - m.swapFree) * 100 / m.swapTotal)
 
 	return nil
 }
