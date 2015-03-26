@@ -43,8 +43,16 @@ func (m *memData) Update() error {
 	m.memUse = m.memTotal - m.memFree
 	m.memPercent = int(m.memUse * 100 / m.memTotal)
 
-	m.swapTotal = calledMem.ullTotalPageFile
-	m.swapFree = calledMem.ullAvailPageFile
+	//massage, because paged memory includes pagefile and RAM and manual removal is it for now
+	//on the plus size, m.swapTotal is now equal to actual pagefile.sys size, so everything is mostly ok
+	m.swapTotal = calledMem.ullTotalPageFile - calledMem.ullTotalPhys
+
+	//check in case of unexpected garbage
+	if calledMem.ullAvailPhys >= calledMem.ullAvailPageFile {
+		m.swapFree = 0
+	} else {
+		m.swapFree = calledMem.ullAvailPageFile - calledMem.ullAvailPhys
+	}
 	m.swapUse = m.swapTotal - m.swapFree
 	m.swapPercent = int(m.swapUse * 100 / m.swapTotal)
 
