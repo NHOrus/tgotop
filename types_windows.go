@@ -15,7 +15,7 @@ type memstatex struct {
 
 //structure used by GetIfEntry from Iphlpapi.dll , information about one interface and network activity on it
 type ifrow struct {
-	wszName           [256]int32
+	wszName           [256]uint16 //need to use syscall.UTF16ToString to deal with it
 	dwIndex           uint32
 	dwType            uint32
 	dwMtu             uint32
