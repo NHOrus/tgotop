@@ -11,6 +11,7 @@ import (
 
 //DIV is size of divider, in this case - MiB
 const DIV uint64 = 1024 * 1024
+const DIVname = "MiB"
 
 func main() {
 	err := ui.Init()
@@ -44,10 +45,10 @@ func main() {
 		}
 
 		gMem.Percent = m.memPercent
-		gMem.Border.Label = fmt.Sprintf("Memory used: %d / %d MiB", m.memUse/DIV, m.memTotal/DIV)
+		gMem.Border.Label = fillfmt("Memory", m.memUse, m.memTotal)
 
 		gSwap.Percent = m.swapPercent
-		gSwap.Border.Label = fmt.Sprintf("Swap used: %d / %d MiB", m.swapUse/DIV, m.swapTotal/DIV)
+		gSwap.Border.Label = fillfmt("Swap", m.swapUse, m.swapTotal)
 		ui.Render(ui.Body)
 	}
 
@@ -73,4 +74,8 @@ func main() {
 			time.Sleep(time.Second / 2)
 		}
 	}
+}
+
+func fillfmt(s string, u uint64, t uint64) string {
+	return fmt.Sprintf("%v used: %d / %d %v", s, u/DIV, t/DIV, DIVname)
 }
