@@ -11,6 +11,8 @@ import (
 
 //DIV is size of divider, in this case - MiB
 const DIV uint64 = 1024 * 1024
+
+//DIVname is a name of unit that we ends up after dividing bytes by DIV
 const DIVname = "MiB"
 
 func main() {
