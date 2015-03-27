@@ -6,7 +6,8 @@ package main
 
 import (
 	proc "github.com/cespare/goproc"
-	"time"
+	//spew "github.com/davecgh/go-spew/spew"
+	//	"time"
 )
 
 func (m *memData) Update() error {
@@ -27,6 +28,20 @@ func (m *memData) Update() error {
 	return nil
 }
 
-func (n *netData) Init() {}
-
-func (n *netData) Poll(t time.Duration) {}
+func getnet() error {
+	var depth = 40
+	r, t, err := proc.NetDevStats()
+	if err != nil {
+		return err
+	}
+	noi := len(t)
+	nd := newNetData(noi, depth)
+	i := 0
+	for key, value := range r {
+		nd.name[i] = key
+		nd.downacc[i].Push(uint64(value["bytes"]))
+		nd.upacc[i].Push(uint64(t[key]["bytes"]))
+		i++
+	}
+	return nil
+}
