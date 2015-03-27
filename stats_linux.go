@@ -29,4 +29,4 @@ func (m *memData) Update() error {
 
 func (n *netData) Init() {}
 
-func (n *netData) Poll(s time.Duration) {}
+func (n *netData) Poll(t time.Duration) {}

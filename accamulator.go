@@ -31,10 +31,10 @@ type DeltaAcc struct {
 }
 
 //NewDeltaAcc returns delta-accumulator of given size
-func NewDeltaAcc(s int) (*DeltaAcc, error) {
+func NewDeltaAcc(s int) *DeltaAcc {
 
 	if s < 1 {
-		return nil, ErrWrongSize
+		panic(ErrWrongSize)
 	}
 	return &DeltaAcc{
 		size: s,
@@ -42,7 +42,7 @@ func NewDeltaAcc(s int) (*DeltaAcc, error) {
 		//but other way is to add more fields in struct
 		ptr:    -1,
 		deltas: make([]int64, s, s),
-	}, nil
+	}
 }
 
 //Purge cleans up the accumulator and returns it sparkingly clean
