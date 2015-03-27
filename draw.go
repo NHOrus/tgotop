@@ -6,6 +6,9 @@ import (
 	"fmt"
 	ui "github.com/gizak/termui"
 	tm "github.com/nsf/termbox-go"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -38,6 +41,8 @@ func main() {
 			evt <- tm.PollEvent()
 		}
 	}()
+	sig := make(chan os.Signal)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
 
 	draw := func() {
 		var m memData
@@ -67,10 +72,15 @@ func main() {
 			if e.Type == tm.EventKey && e.Ch == 'q' {
 				return
 			}
+			if e.Type == tm.EventKey && e.Key == tm.KeyCtrlC {
+				return
+			}
 			if e.Type == tm.EventResize {
 				ui.Body.Width = ui.TermWidth()
 				ui.Body.Align()
 			}
+		case <-sig:
+			return
 		default:
 			go draw()
 			time.Sleep(time.Second / 2)
