@@ -1,4 +1,5 @@
-// memory_windows
+// stat_windows
+// system stats aquisition function
 // in use only when building for Windows
 
 package main

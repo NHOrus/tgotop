@@ -1,7 +1,10 @@
 // accaverager
 package main
 
-import "errors"
+import (
+	"errors"
+	"sync"
+)
 
 var (
 	//ErrBigWindow happens when we try to get more datapoints to average what
@@ -19,11 +22,12 @@ var (
 
 //DeltaAcc accumulates changes between pushed values
 type DeltaAcc struct {
-	size   int
-	ptr    int
-	last   uint64
-	deltas []int64
-	full   bool
+	size       int
+	ptr        int
+	last       uint64
+	deltas     []int64
+	full       bool
+	sync.Mutex //If stuff gets pushed in while we are getting average, BAD THINGS
 }
 
 //NewDeltaAcc returns delta-accumulator of given size
@@ -43,12 +47,14 @@ func NewDeltaAcc(s int) (*DeltaAcc, error) {
 
 //Purge cleans up the accumulator and returns it sparkingly clean
 func (a *DeltaAcc) Purge() {
+	a.Lock()
 	a.ptr = -1
 	a.last = 0
 	for i := 0; i < a.size; i++ {
 		a.deltas[i] = 0
 	}
 	a.full = false
+	a.Unlock()
 }
 
 //Push takes a value and adds difference between it and previous value into accumulator
@@ -56,7 +62,7 @@ func (a *DeltaAcc) Purge() {
 //First delta happens only after two values are pushed in
 func (a *DeltaAcc) Push(v uint64) {
 	var dlt int64 //temporary delta for calculations
-
+	a.Lock()
 	//if
 	if a.ptr == -1 {
 		a.last = v
@@ -74,10 +80,12 @@ func (a *DeltaAcc) Push(v uint64) {
 		a.ptr = a.ptr + 1
 	}
 	a.deltas[a.ptr] = dlt
+	a.Unlock()
 }
 
 //Average returns average of deltas in latest window of given size
 func (a *DeltaAcc) Average(w int) (avg float32, err error) {
+	a.Lock()
 	var sum int64 //here we add every delta in the window
 
 	//if window is bigger than our accumulator, we fail horribly
@@ -102,5 +110,6 @@ func (a *DeltaAcc) Average(w int) (avg float32, err error) {
 			sum += v
 		}
 	}
+	a.Unlock()
 	return float32(sum) / float32(w), nil
 }

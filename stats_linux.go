@@ -1,8 +1,12 @@
-// memory_linux
+// stat_linux
+// system stats aquisition function
+// for Linux and *BSD with mounted procfs
+
 package main
 
 import (
 	proc "github.com/cespare/goproc"
+	"time"
 )
 
 func (m *memData) Update() error {
@@ -22,3 +26,7 @@ func (m *memData) Update() error {
 
 	return nil
 }
+
+func (n *netData) Init() {}
+
+func (n *netData) Poll(s time.Duration) {}

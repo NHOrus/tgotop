@@ -1,4 +1,4 @@
-// memory services for Linux and *BSD with enabled /proc
+// platform-independent system statistics things
 
 package main
 
@@ -11,4 +11,10 @@ type memData struct {
 	swapFree    uint64
 	swapUse     uint64
 	swapPercent int
+}
+
+type netData struct {
+	name    []string
+	upacc   []DeltaAcc
+	downacc []DeltaAcc
 }
