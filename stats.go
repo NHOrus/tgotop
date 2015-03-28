@@ -2,6 +2,10 @@
 
 package main
 
+import (
+	"time"
+)
+
 type memData struct {
 	memTotal    uint64
 	memFree     uint64
@@ -30,4 +34,18 @@ func newNetData(ifnum int, depth int) *netData {
 		t.downacc[i] = *NewDeltaAcc(depth)
 	}
 	return t
+}
+
+func (nd *netData) Init(depth int, rt time.Duration) error {
+	noi, err := getifnum()
+
+	if err != nil {
+		return err
+	}
+	nd = newNetData(noi, depth)
+	go func() {
+		nd.Update()
+		time.Sleep(rt)
+	}()
+	return nil
 }
