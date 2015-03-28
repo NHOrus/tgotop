@@ -77,9 +77,9 @@ func (a *DeltaAcc) Push(v uint64) {
 	}
 
 	if a.last >= v {
-		dlt = int64(a.last - v)
+		dlt = -int64(a.last - v)
 	} else { //stupid unsigned math
-		dlt = -int64(v - a.last)
+		dlt = int64(v - a.last)
 	}
 	if a.ptr == a.size-1 {
 		a.full = true
