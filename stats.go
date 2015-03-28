@@ -20,7 +20,7 @@ type netData struct {
 }
 
 func newNetData(ifnum int, depth int) *netData {
-	var t *netData = new(netData)
+	t := new(netData)
 	t.name = make([]string, ifnum, ifnum)
 	t.upacc = make([]DeltaAcc, ifnum, ifnum)
 	t.downacc = make([]DeltaAcc, ifnum, ifnum)

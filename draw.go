@@ -69,16 +69,7 @@ func main() {
 	for {
 		select {
 		case e := <-evt:
-			if e.Type == tm.EventKey && e.Ch == 'q' {
-				return
-			}
-			if e.Type == tm.EventKey && e.Key == tm.KeyCtrlC {
-				return
-			}
-			if e.Type == tm.EventResize {
-				ui.Body.Width = ui.TermWidth()
-				ui.Body.Align()
-			}
+			go dealwithevents(e)
 		case <-sig:
 			return
 		default:
@@ -90,4 +81,22 @@ func main() {
 
 func fillfmt(s string, u uint64, t uint64) string {
 	return fmt.Sprintf("%v used: %d / %d %v", s, u/DIV, t/DIV, DIVname)
+}
+
+func dealwithevents(e tm.Event) {
+	if e.Type == tm.EventKey && e.Ch == 'q' {
+		enditgood()
+	}
+	if e.Type == tm.EventKey && e.Key == tm.KeyCtrlC {
+		enditgood()
+	}
+	if e.Type == tm.EventResize {
+		ui.Body.Width = ui.TermWidth()
+		ui.Body.Align()
+	}
+}
+
+func enditgood() {
+	ui.Close()
+	os.Exit(0)
 }
