@@ -21,19 +21,21 @@ type netData struct {
 	name    []string
 	upacc   []DeltaAcc
 	downacc []DeltaAcc
+	done    chan bool
 }
 
-func newNetData(ifnum int, depth int) *netData {
-	t := new(netData)
+func (t *netData) setNetData(ifnum int, depth int) {
+
 	t.name = make([]string, ifnum, ifnum)
 	t.upacc = make([]DeltaAcc, ifnum, ifnum)
 	t.downacc = make([]DeltaAcc, ifnum, ifnum)
+	t.done = make(chan bool, 3)
 
 	for i := 0; i < ifnum; i++ {
 		t.upacc[i] = *NewDeltaAcc(depth)
 		t.downacc[i] = *NewDeltaAcc(depth)
 	}
-	return t
+	return
 }
 
 func (nd *netData) Init(depth int, rt time.Duration) error {
@@ -42,10 +44,21 @@ func (nd *netData) Init(depth int, rt time.Duration) error {
 	if err != nil {
 		return err
 	}
-	nd = newNetData(noi, depth)
+	nd.setNetData(noi, depth)
 	go func() {
-		nd.Update()
-		time.Sleep(rt)
+		for {
+			select {
+			case <-nd.done:
+				return
+			default:
+				nd.Update()
+				time.Sleep(rt)
+			}
+		}
 	}()
 	return nil
+}
+
+func (nd *netData) Close() {
+	nd.done <- true
 }
