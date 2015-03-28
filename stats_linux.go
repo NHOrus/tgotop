@@ -6,7 +6,7 @@ package main
 
 import (
 	proc "github.com/cespare/goproc"
-	//spew "github.com/davecgh/go-spew/spew"
+	//	spew "github.com/davecgh/go-spew/spew"
 )
 
 func (m *memData) Update() error {
@@ -35,7 +35,7 @@ func getifnum() (int, error) {
 	return len(r), nil
 }
 
-func (nd *netData) Update() error {
+func (nd *netData) Setup() error {
 	i := 0
 	r, t, err := proc.NetDevStats()
 	if err != nil {
@@ -46,6 +46,18 @@ func (nd *netData) Update() error {
 		nd.downacc[i].Push(uint64(value["bytes"]))
 		nd.upacc[i].Push(uint64(t[key]["bytes"]))
 		i++
+	}
+	return nil
+}
+
+func (nd *netData) Update() error {
+	r, t, err := proc.NetDevStats()
+	if err != nil {
+		return err
+	}
+	for i, key := range nd.name {
+		nd.downacc[i].Push(uint64(r[key]["bytes"]))
+		nd.upacc[i].Push(uint64(t[key]["bytes"]))
 	}
 	return nil
 }

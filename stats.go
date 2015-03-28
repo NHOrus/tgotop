@@ -3,6 +3,7 @@
 package main
 
 import (
+	//spew "github.com/davecgh/go-spew/spew"
 	"time"
 )
 
@@ -45,6 +46,7 @@ func (nd *netData) Init(depth int, rt time.Duration) error {
 		return err
 	}
 	nd.setNetData(noi, depth)
+	nd.Setup()
 	go func() {
 		for {
 			select {
