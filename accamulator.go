@@ -27,7 +27,8 @@ type DeltaAcc struct {
 	last       uint64
 	deltas     []int64
 	full       bool
-	sync.Mutex //If stuff gets pushed in while we are getting average, BAD THINGS
+	sync.Mutex //If stuff gets pushed in while we are getting values out, BAD THINGS
+	//investigate RWMutex later
 }
 
 //NewDeltaAcc returns delta-accumulator of given size
@@ -38,7 +39,7 @@ func NewDeltaAcc(s int) *DeltaAcc {
 	}
 	return &DeltaAcc{
 		size: s,
-		//ptr increments or drops down to zero, it pains me to make "-1"special value
+		//ptr increments or drops down to zero, it pains me to make "-1" special value
 		//but other way is to add more fields in struct
 		ptr:    -1,
 		deltas: make([]int64, s, s),
@@ -57,17 +58,24 @@ func (a *DeltaAcc) Purge() {
 	a.Unlock()
 }
 
-//Push takes a value and adds difference between it and previous value into accumulator
-// going in circles when accumulator is full.
+//Push takes a value and adds difference between it and previous value into
+//accumulator, with circular overwrite on full capacity
 //First delta happens only after two values are pushed in
 func (a *DeltaAcc) Push(v uint64) {
 	var dlt int64 //temporary delta for calculations
+
 	a.Lock()
-	//if
+	defer a.Unlock()
+	//if accumulator freshly initialized, we can't put delta in it
+	//because we know not enough to calculate it
+	//so pushed value gets saved and accumulator goes waiting for
+	//next value, everything proceeding as it ought
 	if a.ptr == -1 {
 		a.last = v
+		a.ptr = 0
 		return
 	}
+
 	if a.last >= v {
 		dlt = int64(a.last - v)
 	} else { //stupid unsigned math
@@ -80,18 +88,19 @@ func (a *DeltaAcc) Push(v uint64) {
 		a.ptr = a.ptr + 1
 	}
 	a.deltas[a.ptr] = dlt
-	a.Unlock()
 }
 
-//Average returns average of deltas in latest window of given size
-func (a *DeltaAcc) Average(w int) (avg float32, err error) {
-	a.Lock()
-	var sum int64 //here we add every delta in the window
-
+//Sum returns sum total of deltas in latest window of given size
+func (a *DeltaAcc) Sum(w int) (sum int64, err error) {
 	//if window is bigger than our accumulator, we fail horribly
 	if w > a.size {
 		return 0, ErrBigWindow
 	}
+
+	//Critical section - DeltaAcc should not chage while we are in it
+	a.Lock()
+	defer a.Unlock()
+
 	//if we don't have enough data to fill window, we fail, less horribly
 	if !a.full && a.ptr < w {
 		return 0, ErrSmallSample
@@ -110,6 +119,11 @@ func (a *DeltaAcc) Average(w int) (avg float32, err error) {
 			sum += v
 		}
 	}
-	a.Unlock()
-	return float32(sum) / float32(w), nil
+	return sum, nil
+}
+
+//Average returns sum average of deltas in latest window of given size
+func (a *DeltaAcc) Average(w int) (avg float32, err error) {
+	sum, err := a.Sum(w)
+	return float32(sum) / float32(w), err
 }
