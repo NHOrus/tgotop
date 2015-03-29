@@ -44,20 +44,22 @@ func main() {
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
 
-	draw := func() {
-		var m memData
-		err := m.Update()
-		if err != nil {
-			panic(err)
+	go func() {
+		for {
+			var m memData
+			err := m.Update()
+			if err != nil {
+				panic(err)
+			}
+
+			gMem.Percent = m.memPercent
+			gMem.Border.Label = fillfmt("Memory", m.memUse, m.memTotal)
+
+			gSwap.Percent = m.swapPercent
+			gSwap.Border.Label = fillfmt("Swap", m.swapUse, m.swapTotal)
+			time.Sleep(time.Second / 2)
 		}
-
-		gMem.Percent = m.memPercent
-		gMem.Border.Label = fillfmt("Memory", m.memUse, m.memTotal)
-
-		gSwap.Percent = m.swapPercent
-		gSwap.Border.Label = fillfmt("Swap", m.swapUse, m.swapTotal)
-		ui.Render(ui.Body)
-	}
+	}()
 
 	ui.Body.AddRows(
 		ui.NewRow(
@@ -69,12 +71,13 @@ func main() {
 	for {
 		select {
 		case e := <-evt:
-			go dealwithevents(e)
+			if dealwithevents(e) {
+				return
+			}
 		case <-sig:
 			return
 		default:
-			go draw()
-			time.Sleep(time.Second / 2)
+			ui.Render(ui.Body)
 		}
 	}
 }
@@ -83,20 +86,16 @@ func fillfmt(s string, u uint64, t uint64) string {
 	return fmt.Sprintf("%v used: %d / %d %v", s, u/DIV, t/DIV, DIVname)
 }
 
-func dealwithevents(e tm.Event) {
+func dealwithevents(e tm.Event) bool {
 	if e.Type == tm.EventKey && e.Ch == 'q' {
-		enditgood()
+		return true
 	}
 	if e.Type == tm.EventKey && e.Key == tm.KeyCtrlC {
-		enditgood()
+		return true
 	}
 	if e.Type == tm.EventResize {
 		ui.Body.Width = ui.TermWidth()
 		ui.Body.Align()
 	}
-}
-
-func enditgood() {
-	ui.Close()
-	os.Exit(0)
+	return false
 }
