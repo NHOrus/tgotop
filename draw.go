@@ -57,7 +57,10 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
 
 	nd := new(netData)
-	nd.Init(3*mult, ptick)
+	err = nd.Init(3*mult, ptick)
+	if err != nil {
+		panic(err)
+	}
 	gNet.Height = nd.size + 3
 	var m memData
 
