@@ -10,10 +10,21 @@ import (
 	"unsafe"
 )
 
+const (
+	ERROR_INSUFFICIENT_BUFFER uintptr = 122
+	ERROR_INVALID_PARAMETER   uintptr = 87
+	ERROR_NOT_SUPPORTED       uintptr = 50
+	NO_ERROR                  uintptr = 0
+)
+
 var (
 	kernel32    = syscall.NewLazyDLL("kernel32.dll")
 	globMemStat = kernel32.NewProc("GlobalMemoryStatusEx")
 	calledMem   memstatex
+	iphelper    = syscall.NewLazyDLL("Iphlpapi.dll")
+	getIfTable  = iphelper.NewProc("GetIfTable")
+	getIfEntry  = iphelper.NewProc("GetIfEntry")
+	currIfTable *iftable
 )
 
 func extMemInfo() {
@@ -47,3 +58,38 @@ func (m *memData) Update() error {
 
 	return nil
 }
+
+func getifnum() (int, error) {
+	currIfTable := new(iftable)
+	size := uint32(unsafe.Sizeof(currIfTable))
+	dsize := uint32(unsafe.Sizeof(currIfTable.table))
+	var ifnum int
+	var bOrder int32
+	ret, _, callErr := getIfTable.Call(uintptr(unsafe.Pointer(currIfTable)), uintptr(unsafe.Pointer(&size)), uintptr(unsafe.Pointer(&bOrder)))
+	if callErr != nil {
+		panic(callErr)
+	}
+	if ret == ERROR_INVALID_PARAMETER || ret == ERROR_NOT_SUPPORTED {
+		panic(ret)
+	}
+	if ret == ERROR_INSUFFICIENT_BUFFER {
+		//magic pointer size math!
+		var ir_temp ifrow
+		rowsize := uint32(unsafe.Sizeof(ir_temp))
+		if (size % rowsize) == dsize {
+			panic("size mismatch, i fear")
+		}
+		ifnum = int(size / rowsize)
+		currIfTable.table = make([]ifrow, ifnum, ifnum)
+		ret, _, callErr := getIfTable.Call(uintptr(unsafe.Pointer(currIfTable)), uintptr(unsafe.Pointer(&size)), uintptr(unsafe.Pointer(&bOrder)))
+	}
+	if ret == NO_ERROR {
+		return int(currIfTable.dwNumEntries), callErr
+	}
+	return int(currIfTable.dwNumEntries), callErr
+}
+
+func (nd *netData) Setup() error {
+}
+
+func (nd *netData) Update() error {}
