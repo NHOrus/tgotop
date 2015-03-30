@@ -125,5 +125,6 @@ func (a *DeltaAcc) Sum(w int) (sum int64, err error) {
 //Average returns sum average of deltas in latest window of given size
 func (a *DeltaAcc) Average(w int) (avg float32, err error) {
 	sum, err := a.Sum(w)
-	return float32(sum) / float32(w), err
+	avg = float32(sum) / float32(w)
+	return
 }
