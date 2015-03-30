@@ -36,16 +36,17 @@ func getifnum() (int, error) {
 }
 
 func (nd *netData) Setup() error {
-	i := 0
 	r, t, err := proc.NetDevStats()
 	if err != nil {
 		return err
 	}
-	for key, value := range r {
-		nd.name[i] = key
-		nd.downacc[i].Push(uint64(value["bytes"]))
-		nd.upacc[i].Push(uint64(t[key]["bytes"]))
-		i++
+	for key := range r {
+		nd.name = append(nd.name, key)
+	}
+
+	for i := 0; i < nd.size; i++ {
+		nd.downacc[i].Push(uint64(r[nd.name[i]]["bytes"]))
+		nd.upacc[i].Push(uint64(t[nd.name[i]]["bytes"]))
 	}
 	return nil
 }

@@ -19,22 +19,23 @@ type memData struct {
 }
 
 type netData struct {
+	size    int
 	name    []string
 	upacc   []DeltaAcc
 	downacc []DeltaAcc
 	done    chan bool
 }
 
-func (t *netData) setNetData(ifnum int, depth int) {
-
-	t.name = make([]string, ifnum, ifnum)
-	t.upacc = make([]DeltaAcc, ifnum, ifnum)
-	t.downacc = make([]DeltaAcc, ifnum, ifnum)
-	t.done = make(chan bool, 3)
+func (nd *netData) setNetData(ifnum int, depth int) {
+	nd.size = ifnum
+	nd.name = make([]string, 0, ifnum)
+	nd.upacc = make([]DeltaAcc, ifnum, ifnum)
+	nd.downacc = make([]DeltaAcc, ifnum, ifnum)
+	nd.done = make(chan bool, 3)
 
 	for i := 0; i < ifnum; i++ {
-		t.upacc[i] = *NewDeltaAcc(depth)
-		t.downacc[i] = *NewDeltaAcc(depth)
+		nd.upacc[i] = *NewDeltaAcc(depth)
+		nd.downacc[i] = *NewDeltaAcc(depth)
 	}
 	return
 }
@@ -46,21 +47,42 @@ func (nd *netData) Init(depth int, rt time.Duration) error {
 		return err
 	}
 	nd.setNetData(noi, depth)
-	nd.Setup()
+	err = nd.Setup()
+	if err != nil {
+		return err
+	}
 	go func() {
 		for {
 			select {
 			case <-nd.done:
 				return
 			default:
-				nd.Update()
+				err = nd.Update()
+				if err != nil {
+					return
+				}
 				time.Sleep(rt)
 			}
 		}
 	}()
-	return nil
+	return err
 }
 
 func (nd *netData) Close() {
 	nd.done <- true
+}
+
+func (nd *netData) GetD(i int, mult int) (d float32) {
+	d, err := nd.downacc[i].Average(mult)
+	if err != nil && err != ErrSmallSample {
+		panic(err)
+	}
+	return d * float32(mult)
+}
+func (nd *netData) GetU(i int, mult int) (u float32) {
+	u, err := nd.upacc[i].Average(mult)
+	if err != nil && err != ErrSmallSample {
+		panic(err)
+	}
+	return u * float32(mult)
 }

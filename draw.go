@@ -3,12 +3,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	//	spew "github.com/davecgh/go-spew/spew"
 	ui "github.com/gizak/termui"
 	tm "github.com/nsf/termbox-go"
 	"os"
 	"os/signal"
 	"syscall"
+	"text/tabwriter"
 	"time"
 )
 
@@ -17,6 +20,13 @@ const DIV uint64 = 1024 * 1024
 
 //DIVname is a name of unit that we ends up after dividing bytes by DIV
 const DIVname = "MiB"
+
+const (
+	mult  = 10
+	dtick = time.Second / 2    //red
+	atick = time.Second        //averaging interval
+	ptick = time.Second / mult //polling interval
+)
 
 func main() {
 	err := ui.Init()
@@ -34,6 +44,8 @@ func main() {
 	gMem := ui.NewGauge()
 	gMem.Height = 3
 
+	gNet := ui.NewList()
+
 	//getting ready to close stuff on command
 	evt := make(chan tm.Event)
 	go func() {
@@ -44,9 +56,13 @@ func main() {
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
 
+	nd := new(netData)
+	nd.Init(3*mult, ptick)
+	gNet.Height = nd.size + 3
+	var m memData
+
 	go func() {
 		for {
-			var m memData
 			err := m.Update()
 			if err != nil {
 				panic(err)
@@ -57,13 +73,16 @@ func main() {
 
 			gSwap.Percent = m.swapPercent
 			gSwap.Border.Label = fillfmt("Swap", m.swapUse, m.swapTotal)
-			time.Sleep(time.Second / 2)
+
+			gNet.Items = netf(nd)
+			time.Sleep(dtick)
 		}
 	}()
 
 	ui.Body.AddRows(
 		ui.NewRow(
-			ui.NewCol(6, 0, gMem, gSwap)),
+			ui.NewCol(6, 0, gMem, gSwap),
+			ui.NewCol(6, 0, gNet)),
 		ui.NewRow(ui.NewCol(12, 0, qMess)))
 
 	ui.Body.Align()
@@ -98,4 +117,24 @@ func dealwithevents(e tm.Event) bool {
 		ui.Body.Align()
 	}
 	return false
+}
+
+func netf(nd *netData) []string {
+	strings := make([]string, 0, nd.size+1)
+	var b bytes.Buffer
+	tb := tabwriter.NewWriter(&b, 0, 8, 0, ' ', tabwriter.AlignRight)
+	fmt.Fprintln(tb, "IFace\t Down\t Up\t")
+	for i := 0; i < nd.size; i++ {
+		fmt.Fprintf(tb, "%v:\t %.2f B/s\t %.2f B/s\t\n", nd.name[i], nd.GetD(i, mult), nd.GetU(i, mult))
+	}
+
+	tb.Flush()
+	for i := 0; i <= nd.size; i++ {
+		ts, err := b.ReadString('\n')
+		if err != nil {
+			panic(err)
+		}
+		strings = append(strings, ts)
+	}
+	return strings
 }
