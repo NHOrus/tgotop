@@ -102,7 +102,7 @@ func main() {
 }
 
 func fillfmt(s string, u uint64, t uint64) string {
-	return fmt.Sprintf("%v used: %d / %d %v", s, u/DIV, t/DIV, DIVname)
+	return fmt.Sprintf("%v used: %v / %v", s, fmtbytes(float32(u)), fmtbytes(float32(t)))
 }
 
 func dealwithevents(e tm.Event) bool {
@@ -122,10 +122,13 @@ func dealwithevents(e tm.Event) bool {
 func netf(nd *netData) []string {
 	strings := make([]string, 0, nd.size+1)
 	var b bytes.Buffer
-	tb := tabwriter.NewWriter(&b, 0, 8, 0, ' ', tabwriter.AlignRight)
+	tb := tabwriter.NewWriter(&b, 10, 8, 0, ' ', tabwriter.AlignRight)
 	fmt.Fprintln(tb, "IFace\t Down\t Up\t")
 	for i := 0; i < nd.size; i++ {
-		fmt.Fprintf(tb, "%v:\t %.2f B/s\t %.2f B/s\t\n", nd.name[i], nd.GetD(i, mult), nd.GetU(i, mult))
+		fmt.Fprintf(tb, "%v:\t %s/s\t %s/s\t\n",
+			nd.name[i],
+			fmtbytes(nd.GetD(i, mult)),
+			fmtbytes(nd.GetU(i, mult)))
 	}
 
 	tb.Flush()
