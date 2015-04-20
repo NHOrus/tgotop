@@ -91,11 +91,11 @@ func main() {
 }
 
 func fillfmt(s string, u uint64, t uint64) string {
-	return fmt.Sprintf("%v used: %v / %v", s, fmtbytes(float32(u)), fmtbytes(float32(t)))
+	return fmt.Sprintf("%v used: %v / %v", s, human_bytes(float32(u)), human_bytes(float32(t)))
 }
 
 func dealwithevents(e ui.Event) bool {
-	if e.Type == ui.EventKey && e.Ch == 'q' {
+	if e.Type == ui.EventKey && (e.Ch == 'q' || e.Ch == 'Q') {
 		return true
 	}
 	if e.Type == ui.EventKey && e.Key == ui.KeyCtrlC {
@@ -116,8 +116,8 @@ func netf(nd *netData) []string {
 	for i := 0; i < nd.size; i++ {
 		fmt.Fprintf(tb, "%v:\t %s/s\t %s/s\t\n",
 			nd.name[i],
-			fmtbytes(nd.GetD(i, mult)),
-			fmtbytes(nd.GetU(i, mult)))
+			human_bytes(nd.GetD(i, mult)),
+			human_bytes(nd.GetU(i, mult)))
 	}
 
 	tb.Flush()
