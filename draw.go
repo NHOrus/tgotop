@@ -7,7 +7,7 @@ import (
 	"fmt"
 	//	spew "github.com/davecgh/go-spew/spew"
 	ui "github.com/gizak/termui"
-	tm "github.com/nsf/termbox-go"
+	//tm "github.com/nsf/termbox-go"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,17 +15,11 @@ import (
 	"time"
 )
 
-//DIV is size of divider, in this case - MiB
-const DIV uint64 = 1024 * 1024
-
-//DIVname is a name of unit that we ends up after dividing bytes by DIV
-const DIVname = "MiB"
-
 const (
 	mult  = 10
-	dtick = time.Second / 2    //red
+	dtick = time.Second / 2    //redrawing interval
 	atick = time.Second        //averaging interval
-	ptick = time.Second / mult //polling interval
+	ptick = atick / mult //polling interval
 )
 
 func main() {
@@ -47,12 +41,7 @@ func main() {
 	gNet := ui.NewList()
 
 	//getting ready to close stuff on command
-	evt := make(chan tm.Event)
-	go func() {
-		for {
-			evt <- tm.PollEvent()
-		}
-	}()
+	evt := ui.EventCh()
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
 
@@ -105,14 +94,14 @@ func fillfmt(s string, u uint64, t uint64) string {
 	return fmt.Sprintf("%v used: %v / %v", s, fmtbytes(float32(u)), fmtbytes(float32(t)))
 }
 
-func dealwithevents(e tm.Event) bool {
-	if e.Type == tm.EventKey && e.Ch == 'q' {
+func dealwithevents(e ui.Event) bool {
+	if e.Type == ui.EventKey && e.Ch == 'q' {
 		return true
 	}
-	if e.Type == tm.EventKey && e.Key == tm.KeyCtrlC {
+	if e.Type == ui.EventKey && e.Key == ui.KeyCtrlC {
 		return true
 	}
-	if e.Type == tm.EventResize {
+	if e.Type == ui.EventResize {
 		ui.Body.Width = ui.TermWidth()
 		ui.Body.Align()
 	}

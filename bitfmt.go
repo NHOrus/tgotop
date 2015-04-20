@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+//KiB and others are binary powers of byte.
 const (
 	KiB float32 = 1024
 	MiB         = 1024 * 1024
