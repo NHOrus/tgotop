@@ -9,6 +9,16 @@ import (
 	//	spew "github.com/davecgh/go-spew/spew"
 )
 
+/*
+var (
+	CPUuser DeltaAcc
+	CPUsuser []DeltaAcc
+	CPUsys DeltaAcc
+	CPUssys []DeltaAcc
+	CPUidle DeltaAcc
+	CPUsidle []DeltaAcc)
+*/
+
 func (m *memData) Update() error {
 	t, err := proc.MemInfo()
 	if err != nil {

@@ -17,9 +17,9 @@ import (
 
 const (
 	mult  = 10
-	dtick = time.Second / 2    //redrawing interval
-	atick = time.Second        //averaging interval
-	ptick = atick / mult //polling interval
+	dtick = time.Second / 2 //redrawing interval
+	atick = time.Second     //averaging interval
+	ptick = atick / mult    //polling interval
 )
 
 func main() {
@@ -46,7 +46,12 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
 
 	nd := new(netData)
-	nd.Init(3*mult, ptick)
+	err = nd.Init(3*mult, ptick)
+
+	if err != nil {
+		panic(err)
+	}
+
 	gNet.Height = nd.size + 3
 	var m memData
 
@@ -91,7 +96,7 @@ func main() {
 }
 
 func fillfmt(s string, u uint64, t uint64) string {
-	return fmt.Sprintf("%v used: %v / %v", s, human_bytes(float32(u)), human_bytes(float32(t)))
+	return fmt.Sprintf("%v used: %v / %v", s, humanBytes(float32(u)), humanBytes(float32(t)))
 }
 
 func dealwithevents(e ui.Event) bool {
@@ -116,11 +121,15 @@ func netf(nd *netData) []string {
 	for i := 0; i < nd.size; i++ {
 		fmt.Fprintf(tb, "%v:\t %s/s\t %s/s\t\n",
 			nd.name[i],
-			human_bytes(nd.GetD(i, mult)),
-			human_bytes(nd.GetU(i, mult)))
+			humanBytes(nd.GetD(i, mult)),
+			humanBytes(nd.GetU(i, mult)))
 	}
 
-	tb.Flush()
+	err := tb.Flush()
+
+	if err != nil {
+		panic(err)
+	}
 	for i := 0; i <= nd.size; i++ {
 		ts, err := b.ReadString('\n')
 		if err != nil {

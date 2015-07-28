@@ -26,6 +26,13 @@ type netData struct {
 	done    chan bool
 }
 
+/*
+type cpuData struct {
+	//usage = user+system/(user+system+idle)
+	CPUhist []int
+	CPUusage []int
+} */
+
 func (nd *netData) setNetData(ifnum int, depth int) {
 	nd.size = ifnum
 	nd.name = make([]string, 0, ifnum)

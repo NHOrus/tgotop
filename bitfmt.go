@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//KiB and others are binary powers of byte. They are used to format values from 
+//KiB and others are binary powers of byte. They are used to format values from
 //big amount of bytes into human-readable values
 const (
 	KiB float32 = 1024
@@ -16,7 +16,7 @@ const (
 )
 
 //formats value in bytes into human-readable value in binary power of bytes.
-func human_bytes(b float32) string {
+func humanBytes(b float32) string {
 	if b > 10*PiB {
 		return fmt.Sprintf("%.0f PiB", b/PiB)
 	}
