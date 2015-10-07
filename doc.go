@@ -1,6 +1,6 @@
 // tgotop project doc.go
 
 /*
-tgotop document
+Tgotop is an cross-platform visualizer of PC usage statistic
 */
 package main

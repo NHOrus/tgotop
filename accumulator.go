@@ -1,4 +1,3 @@
-// accaverager
 package main
 
 import (
