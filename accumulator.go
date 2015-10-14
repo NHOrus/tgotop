@@ -19,22 +19,17 @@ var (
 	ErrWrongSize = errors.New("size can not be less than one")
 )
 
-//DeltaAcc accumulates changes between pushed values
-type DeltaAcc struct {
-	last uint64
-	Acc
-}
-
+//Acc is a write-only ring buffer of finite and static capacity, with methods that
+//provide sum and average of last n values pushed inside
 type Acc struct {
 	size int
-	ptr  int
+	head int //as Acc is  read-only, there is no need to know position of tail
 	vals []int64
 	sync.RWMutex
 	full bool
 }
 
-//NewDeltaAcc returns delta-accumulator of given size
-
+//NewAcc returns accumulator of given size
 func NewAcc(s int) *Acc {
 	if s < 1 {
 		panic(ErrWrongSize)
@@ -46,29 +41,10 @@ func NewAcc(s int) *Acc {
 	}
 }
 
-func NewDeltaAcc(s int) *DeltaAcc {
-
-	return &DeltaAcc{
-		Acc: *NewAcc(s),
-	}
-}
-
-//Purge cleans up the accumulator and returns it sparkingly clean
-func (a *DeltaAcc) Purge() {
-	a.Lock()
-	a.ptr = 0
-	a.last = 0
-	for i := 0; i < a.size; i++ {
-		a.vals[i] = 0
-	}
-	a.full = false
-	a.Unlock()
-}
-
 //Purge cleans up the accumulator and returns it sparkingly clean
 func (a *Acc) Purge() {
 	a.Lock()
-	a.ptr = 0
+	a.head = 0
 	for i := 0; i < a.size; i++ {
 		a.vals[i] = 0
 	}
@@ -76,35 +52,20 @@ func (a *Acc) Purge() {
 	a.Unlock()
 }
 
-//Code duplicate due to mutexes. Do not want to mess with mutexes
-
+//Push adds new value into Acc, overwriting old ones and wrapping
+//around the ring as needed
 func (a *Acc) Push(v int64) {
 	a.Lock()
 	defer a.Unlock()
 
-	a.vals[a.ptr] = v
+	a.vals[a.head] = v
 
-	if a.ptr == a.size-1 {
+	if a.head == a.size-1 {
 		a.full = true
-		a.ptr = 0
+		a.head = 0
 	} else {
-		a.ptr = a.ptr + 1
+		a.head = a.head + 1
 	}
-}
-
-//Push takes a value and adds difference between it and previous value into
-//accumulator, with circular overwrite on full capacity
-//First delta happens only after two values are pushed in
-func (a *DeltaAcc) Push(v uint64) {
-	var dlt int64 //temporary delta for calculations
-
-	if a.last >= v {
-		dlt = -int64(a.last - v)
-	} else { //stupid unsigned math
-		dlt = int64(v - a.last)
-	}
-	a.last = v
-	a.Acc.Push(dlt)
 }
 
 //Sum returns sum total of deltas in latest window of given size
@@ -119,20 +80,20 @@ func (a *Acc) Sum(w int) (sum int64, err error) {
 	defer a.RUnlock()
 
 	//if we don't have enough data to fill window, we fail, less horribly
-	if !a.full && a.ptr < w {
+	if !a.full && a.head < w {
 		return 0, ErrSmallSample
 	}
 	//if we need to get bits from different ends of our slice, let it be so
-	if a.ptr < w {
-		for _, v := range a.vals[:a.ptr] {
+	if a.head < w {
+		for _, v := range a.vals[:a.head] {
 			sum += v
 		}
 		//pointer math, circular buffer, yay!
-		for _, v := range a.vals[a.size+a.ptr-w:] {
+		for _, v := range a.vals[a.size+a.head-w:] {
 			sum += v
 		}
 	} else { //sane, classic situation - window fell in the middle of the slice
-		for _, v := range a.vals[a.ptr-w : a.ptr] {
+		for _, v := range a.vals[a.head-w : a.head] {
 			sum += v
 		}
 	}
@@ -146,14 +107,50 @@ func (a *Acc) Average(w int) (avg float32, err error) {
 	return
 }
 
-func (a *Acc) lastval() int64 {
-	return a.vals[a.ptr-1]
+//DeltaAcc accumulates changes between pushed values.
+//For DeltaAcc amount of remembered points is either size of underlying Acc or
+//pushed amount minus one.
+type DeltaAcc struct {
+	last  uint64
+	initd bool
+	Acc
 }
 
-func (a *DeltaAcc) lastval() uint64 {
-	return a.last
+//NewDeltaAcc returns delta-accumulator of given size
+func NewDeltaAcc(s int) *DeltaAcc {
+
+	return &DeltaAcc{
+		Acc: *NewAcc(s),
+	}
 }
 
-func (a *DeltaAcc) lastdelta() int64 {
-	return a.Acc.lastval()
+//Purge cleans up the accumulator and returns it sparkingly clean
+func (a *DeltaAcc) Purge() {
+	a.Lock()
+	a.head = 0
+	a.last = 0
+	for i := 0; i < a.size; i++ {
+		a.vals[i] = 0
+	}
+	a.full = false
+	a.Unlock()
+}
+
+//Push takes a value and adds difference between it and previous value into
+//accumulator, with circular overwrite on full capacity
+//First delta happens only after two values were pushed in
+func (a *DeltaAcc) Push(v uint64) {
+	defer func() { a.last = v }()
+
+	if !a.initd {
+		a.initd = true
+		return
+	}
+
+	if a.last >= v {
+		a.Acc.Push(-int64(a.last - v))
+	} else { //stupid unsigned math
+		a.Acc.Push(int64(v - a.last))
+	}
+
 }
