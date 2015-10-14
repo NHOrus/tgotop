@@ -8,9 +8,9 @@ func TestZeroDeltaAcc(t *testing.T) {
 			t.FailNow()
 		}
 	}()
-	_ = NewDeltaAcc(0)
+	_ = NewAcc(0)
 }
 
-func TestNewDeltaAcc(t *testing.T) {
+func TestNewAcc(t *testing.T) {
 
 }

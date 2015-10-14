@@ -21,40 +21,68 @@ var (
 
 //DeltaAcc accumulates changes between pushed values
 type DeltaAcc struct {
-	size       int
-	ptr        int
-	last       uint64
-	deltas     []int64
-	full       bool
-	sync.Mutex //If stuff gets pushed in while we are getting values out, BAD THINGS
-	//investigate RWMutex later
+	last uint64
+	Acc
+}
+
+type Acc struct {
+	size int
+	ptr  int
+	vals []int64
+	sync.RWMutex
+	full bool
 }
 
 //NewDeltaAcc returns delta-accumulator of given size
-func NewDeltaAcc(s int) *DeltaAcc {
 
+func NewAcc(s int) *Acc {
 	if s < 1 {
 		panic(ErrWrongSize)
 	}
-	return &DeltaAcc{
+	return &Acc{
 		size: s,
 		//ptr increments or drops down to zero, it pains me to make "-1" special value
 		//but other way is to add more fields in struct
-		ptr:    -1,
-		deltas: make([]int64, s, s),
+		vals: make([]int64, s, s),
+	}
+}
+
+func NewDeltaAcc(s int) *DeltaAcc {
+
+	return &DeltaAcc{
+		Acc: *NewAcc(s),
 	}
 }
 
 //Purge cleans up the accumulator and returns it sparkingly clean
 func (a *DeltaAcc) Purge() {
 	a.Lock()
-	a.ptr = -1
+	a.ptr = 0
 	a.last = 0
 	for i := 0; i < a.size; i++ {
-		a.deltas[i] = 0
+		a.vals[i] = 0
 	}
 	a.full = false
 	a.Unlock()
+}
+
+//Purge cleans up the accumulator and returns it sparkingly clean
+func (a *Acc) Purge() {
+	a.Lock()
+	a.ptr = 0
+	for i := 0; i < a.size; i++ {
+		a.vals[i] = 0
+	}
+	a.full = false
+	a.Unlock()
+}
+
+//Code duplicate due to mutexes. Do not want to mess with mutexes
+
+func (a *Acc) Push(v int64) {
+	a.Lock()
+	defer a.Unlock()
+	a.vals[a.ptr] = v
 }
 
 //Push takes a value and adds difference between it and previous value into
@@ -63,8 +91,6 @@ func (a *DeltaAcc) Purge() {
 func (a *DeltaAcc) Push(v uint64) {
 	var dlt int64 //temporary delta for calculations
 
-	a.Lock()
-	defer a.Unlock()
 	//if accumulator freshly initialized, we can't put delta in it
 	//because we know not enough to calculate it
 	//so pushed value gets saved and accumulator goes waiting for
@@ -87,19 +113,19 @@ func (a *DeltaAcc) Push(v uint64) {
 	} else {
 		a.ptr = a.ptr + 1
 	}
-	a.deltas[a.ptr] = dlt
+	a.Acc.Push(dlt)
 }
 
 //Sum returns sum total of deltas in latest window of given size
-func (a *DeltaAcc) Sum(w int) (sum int64, err error) {
+func (a *Acc) Sum(w int) (sum int64, err error) {
 	//if window is bigger than our accumulator, we fail horribly
 	if w > a.size {
 		return 0, ErrBigWindow
 	}
 
 	//Critical section - DeltaAcc should not chage while we are in it
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 
 	//if we don't have enough data to fill window, we fail, less horribly
 	if !a.full && a.ptr < w {
@@ -107,15 +133,15 @@ func (a *DeltaAcc) Sum(w int) (sum int64, err error) {
 	}
 	//if we need to get bits from different ends of our slice, let it be so
 	if a.ptr < w {
-		for _, v := range a.deltas[:a.ptr] {
+		for _, v := range a.vals[:a.ptr] {
 			sum += v
 		}
 		//pointer math, circular buffer, yay!
-		for _, v := range a.deltas[a.size+a.ptr-w:] {
+		for _, v := range a.vals[a.size+a.ptr-w:] {
 			sum += v
 		}
 	} else { //sane, classic situation - window fell in the middle of the slice
-		for _, v := range a.deltas[a.ptr-w : a.ptr] {
+		for _, v := range a.vals[a.ptr-w : a.ptr] {
 			sum += v
 		}
 	}
@@ -123,7 +149,7 @@ func (a *DeltaAcc) Sum(w int) (sum int64, err error) {
 }
 
 //Average returns sum average of deltas in latest window of given size
-func (a *DeltaAcc) Average(w int) (avg float32, err error) {
+func (a *Acc) Average(w int) (avg float32, err error) {
 	sum, err := a.Sum(w)
 	avg = float32(sum) / float32(w)
 	return
