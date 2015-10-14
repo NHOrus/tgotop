@@ -39,10 +39,9 @@ func NewAcc(s int) *Acc {
 	if s < 1 {
 		panic(ErrWrongSize)
 	}
+
 	return &Acc{
 		size: s,
-		//ptr increments or drops down to zero, it pains me to make "-1" special value
-		//but other way is to add more fields in struct
 		vals: make([]int64, s, s),
 	}
 }
@@ -82,7 +81,15 @@ func (a *Acc) Purge() {
 func (a *Acc) Push(v int64) {
 	a.Lock()
 	defer a.Unlock()
+
 	a.vals[a.ptr] = v
+
+	if a.ptr == a.size-1 {
+		a.full = true
+		a.ptr = 0
+	} else {
+		a.ptr = a.ptr + 1
+	}
 }
 
 //Push takes a value and adds difference between it and previous value into
@@ -91,28 +98,12 @@ func (a *Acc) Push(v int64) {
 func (a *DeltaAcc) Push(v uint64) {
 	var dlt int64 //temporary delta for calculations
 
-	//if accumulator freshly initialized, we can't put delta in it
-	//because we know not enough to calculate it
-	//so pushed value gets saved and accumulator goes waiting for
-	//next value, everything proceeding as it ought
-	if a.ptr == -1 {
-		a.last = v
-		a.ptr = 0
-		return
-	}
-
 	if a.last >= v {
 		dlt = -int64(a.last - v)
 	} else { //stupid unsigned math
 		dlt = int64(v - a.last)
 	}
 	a.last = v
-	if a.ptr == a.size-1 {
-		a.full = true
-		a.ptr = 0
-	} else {
-		a.ptr = a.ptr + 1
-	}
 	a.Acc.Push(dlt)
 }
 
@@ -153,4 +144,16 @@ func (a *Acc) Average(w int) (avg float32, err error) {
 	sum, err := a.Sum(w)
 	avg = float32(sum) / float32(w)
 	return
+}
+
+func (a *Acc) lastval() int64 {
+	return a.vals[a.ptr-1]
+}
+
+func (a *DeltaAcc) lastval() uint64 {
+	return a.last
+}
+
+func (a *DeltaAcc) lastdelta() int64 {
+	return a.Acc.lastval()
 }
