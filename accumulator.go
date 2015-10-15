@@ -92,7 +92,7 @@ func (a *Acc) Sum(w int) (sum int64, err error) {
 		for _, v := range a.vals[a.size+a.head-w:] {
 			sum += v
 		}
-	} else { //sane, classic situation - window fell in the middle of the slice
+	} else { //sane, classic situation - window is inside the slice
 		for _, v := range a.vals[a.head-w : a.head] {
 			sum += v
 		}
