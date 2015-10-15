@@ -1,6 +1,7 @@
 package main
 
 import "testing"
+import "math"
 
 func TestZeroNewAcc(t *testing.T) {
 	defer func() {
@@ -98,6 +99,10 @@ func TestDeltaAvg(t *testing.T) {
 	}
 	if i, err := a.Average(4); err != nil && i != -2. {
 		t.Error("Something wrong when taking an average of negatives")
+	}
+
+	if i, err := a.Average(0); err != nil && math.IsNaN(float64(i)) {
+		t.Error("Got no stupid answer to stupid question of 0/0")
 	}
 }
 
