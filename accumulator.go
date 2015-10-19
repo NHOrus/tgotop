@@ -22,10 +22,9 @@ var (
 //Acc is a write-only ring buffer of finite and static capacity, with methods that
 //provide sum and average of last n values pushed inside
 type Acc struct {
-	size int
 	head int //as Acc is  read-only, there is no need to know position of tail
 	vals []int64
-	sync.RWMutex
+	mu   sync.RWMutex
 	full bool
 }
 
@@ -36,31 +35,19 @@ func NewAcc(s int) *Acc {
 	}
 
 	return &Acc{
-		size: s,
 		vals: make([]int64, s, s),
 	}
-}
-
-//Purge cleans up the accumulator and returns it sparkingly clean
-func (a *Acc) Purge() {
-	a.Lock()
-	a.head = 0
-	for i := 0; i < a.size; i++ {
-		a.vals[i] = 0
-	}
-	a.full = false
-	a.Unlock()
 }
 
 //Push adds new value into Acc, overwriting old ones and wrapping
 //around the ring as needed
 func (a *Acc) Push(v int64) {
-	a.Lock()
-	defer a.Unlock()
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
 	a.vals[a.head] = v
 
-	if a.head == a.size-1 {
+	if a.head == cap(a.vals)-1 {
 		a.full = true
 		a.head = 0
 	} else {
@@ -71,13 +58,13 @@ func (a *Acc) Push(v int64) {
 //Sum returns sum total of deltas in latest window of given size
 func (a *Acc) Sum(w int) (sum int64, err error) {
 	//if window is bigger than our accumulator, we fail horribly
-	if w > a.size {
+	if w > cap(a.vals) {
 		return 0, ErrBigWindow
 	}
 
 	//Critical section - DeltaAcc should not chage while we are in it
-	a.RLock()
-	defer a.RUnlock()
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
 	//if we don't have enough data to fill window, we fail, less horribly
 	if !a.full && a.head < w {
@@ -89,7 +76,7 @@ func (a *Acc) Sum(w int) (sum int64, err error) {
 			sum += v
 		}
 		//pointer math, circular buffer, yay!
-		for _, v := range a.vals[a.size+a.head-w:] {
+		for _, v := range a.vals[cap(a.vals)+a.head-w:] {
 			sum += v
 		}
 	} else { //sane, classic situation - window is inside the slice
@@ -122,18 +109,6 @@ func NewDeltaAcc(s int) *DeltaAcc {
 	return &DeltaAcc{
 		Acc: *NewAcc(s),
 	}
-}
-
-//Purge cleans up the accumulator and returns it sparkingly clean
-func (a *DeltaAcc) Purge() {
-	a.Lock()
-	a.head = 0
-	a.last = 0
-	for i := 0; i < a.size; i++ {
-		a.vals[i] = 0
-	}
-	a.full = false
-	a.Unlock()
 }
 
 //Push takes a value and adds difference between it and previous value into

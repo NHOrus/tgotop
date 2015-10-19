@@ -6,7 +6,7 @@ import "math"
 func TestZeroNewAcc(t *testing.T) {
 	defer func() {
 		if err := recover(); err != ErrWrongSize {
-			t.FailNow()
+			t.Error("Not panicing when we really, really should")
 		}
 	}()
 	_ = NewAcc(0)
@@ -54,7 +54,17 @@ func TestSum(t *testing.T) {
 
 	var tv int64 = 10 //test value
 	a.Push(tv)
-	b, err := a.Sum(1)
+
+	b, err := a.Sum(0)
+
+	if err != nil {
+		t.Error("Erroring while everything is correct")
+	}
+	if b != 0 {
+		t.Error("Sum of null elements should be zero, not ", b)
+	}
+
+	b, err = a.Sum(1)
 	if err != nil {
 		t.Error("Erroring while everything is correct")
 	}
@@ -77,11 +87,16 @@ func TestSum(t *testing.T) {
 
 func TestAverage(t *testing.T) {
 	a := NewAcc(10)
+
 	for _, i := range []int64{2, 4, 6, 8} {
 		a.Push(i)
 	}
 	if i, err := a.Average(4); err != nil && i != 10. {
 		t.Error("Something wrong when taking an average")
+	}
+
+	if i, err := a.Average(0); err != nil && math.IsNaN(float64(i)) {
+		t.Error("Got no stupid answer to stupid question of 0/0")
 	}
 }
 
