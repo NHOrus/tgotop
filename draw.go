@@ -17,7 +17,8 @@ import (
 
 const (
 	mult  = 10
-	dtick = time.Second / 2 //redrawing interval
+	dtick = time.Second / 2 //refreshing interval
+	rtick = time.Second /60 //redrawint interval
 	atick = time.Second     //averaging interval
 	ptick = atick / mult    //polling interval
 )
@@ -80,7 +81,7 @@ func main() {
 		ui.NewRow(ui.NewCol(12, 0, qMess)))
 
 	ui.Body.Align()
-
+	tkr := time.Tick(rtick)
 	for {
 		select {
 		case e := <-evt:
@@ -89,7 +90,7 @@ func main() {
 			}
 		case <-sig:
 			return
-		default:
+		case <- tkr:
 			ui.Render(ui.Body)
 		}
 	}
