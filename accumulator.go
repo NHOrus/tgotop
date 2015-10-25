@@ -98,9 +98,9 @@ func (a *Acc) Average(w int) (avg float32, err error) {
 //For DeltaAcc amount of remembered points is either size of underlying Acc or
 //pushed amount minus one.
 type DeltaAcc struct {
-	last  uint64
-	initd bool
+	last uint64
 	Acc
+	initd bool
 }
 
 //NewDeltaAcc returns delta-accumulator of given size
