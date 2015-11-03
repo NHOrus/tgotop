@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	//	spew "github.com/davecgh/go-spew/spew"
-	ui "github.com/gizak/termui"
+	ui "gopkg.in/gizak/termui.v1"
 	//tm "github.com/nsf/termbox-go"
 	"os"
 	"os/signal"
