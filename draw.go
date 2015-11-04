@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	//	spew "github.com/davecgh/go-spew/spew"
-	ui "gopkg.in/gizak/termui.v1"
+	ui "gopkg.in/gizak/termui.v2"
 	//tm "github.com/nsf/termbox-go"
 	"os"
 	"os/signal"
@@ -17,10 +17,8 @@ import (
 
 const (
 	mult  = 10
-	dtick = time.Second / 2 //refreshing interval
-	rtick = time.Second /60 //redrawint interval
-	atick = time.Second     //averaging interval
-	ptick = atick / mult    //polling interval
+	atick = time.Second  //averaging interval
+	ptick = atick / mult //polling interval
 )
 
 func main() {
@@ -42,7 +40,6 @@ func main() {
 	gNet := ui.NewList()
 
 	//getting ready to close stuff on command
-	evt := ui.EventCh()
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
 
@@ -56,24 +53,6 @@ func main() {
 	gNet.Height = nd.size + 3
 	var m memData
 
-	go func() {
-		for {
-			err := m.Update()
-			if err != nil {
-				panic(err)
-			}
-
-			gMem.Percent = m.memPercent
-			gMem.Border.Label = fillfmt("Memory", m.memUse, m.memTotal)
-
-			gSwap.Percent = m.swapPercent
-			gSwap.Border.Label = fillfmt("Swap", m.swapUse, m.swapTotal)
-
-			gNet.Items = netf(nd)
-			time.Sleep(dtick)
-		}
-	}()
-
 	ui.Body.AddRows(
 		ui.NewRow(
 			ui.NewCol(6, 0, gMem, gSwap),
@@ -81,37 +60,44 @@ func main() {
 		ui.NewRow(ui.NewCol(12, 0, qMess)))
 
 	ui.Body.Align()
-	tkr := time.Tick(rtick)
-	for {
-		select {
-		case e := <-evt:
-			if dealwithevents(e) {
-				return
-			}
-		case <-sig:
-			return
-		case <- tkr:
-			ui.Render(ui.Body)
+
+	ui.Handle("/timer/0.016s", func(ui.Event) {
+		err := m.Update()
+		if err != nil {
+			panic(err)
 		}
-	}
+
+		gMem.Percent = m.memPercent
+		gMem.BorderLabel = fillfmt("Memory", m.memUse, m.memTotal)
+
+		gSwap.Percent = m.swapPercent
+		gSwap.BorderLabel = fillfmt("Swap", m.swapUse, m.swapTotal)
+
+		gNet.Items = netf(nd)
+	})
+
+	ui.Handle("/sys/kdb/q", func(ui.Event) {
+		ui.StopLoop()
+	})
+
+	ui.Handle("/sys/kdb/Q", func(ui.Event) {
+		ui.StopLoop()
+	})
+
+	ui.Handle("/sys/kdb/C-c", func(ui.Event) {
+		ui.StopLoop()
+	})
+
+	ui.Handle("/sys/wnd/resize", func(ui.Event) {
+		ui.Body.Width = ui.TermWidth()
+		ui.Body.Align()
+	})
+
+	ui.Loop()
 }
 
 func fillfmt(s string, u uint64, t uint64) string {
 	return fmt.Sprintf("%v used: %v / %v", s, humanBytes(float32(u)), humanBytes(float32(t)))
-}
-
-func dealwithevents(e ui.Event) bool {
-	if e.Type == ui.EventKey && (e.Ch == 'q' || e.Ch == 'Q') {
-		return true
-	}
-	if e.Type == ui.EventKey && e.Key == ui.KeyCtrlC {
-		return true
-	}
-	if e.Type == ui.EventResize {
-		ui.Body.Width = ui.TermWidth()
-		ui.Body.Align()
-	}
-	return false
 }
 
 func netf(nd *netData) []string {
