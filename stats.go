@@ -79,17 +79,17 @@ func (nd *netData) Close() {
 	nd.done <- true
 }
 
-func (nd *netData) GetD(i int, mult int) (d float32) {
-	d, err := nd.downacc[i].Average(mult)
+func getnetdata(i int, mult int, acc *DeltaAcc) (r float32) {
+	r, err := acc.Average(mult)
 	if err != nil && err != ErrSmallSample {
 		panic(err)
 	}
-	return d * float32(mult)
+	return r * float32(mult)
 }
-func (nd *netData) GetU(i int, mult int) (u float32) {
-	u, err := nd.upacc[i].Average(mult)
-	if err != nil && err != ErrSmallSample {
-		panic(err)
-	}
-	return u * float32(mult)
+
+func (nd *netData) GetD(i int, mult int) float32 {
+	return getnetdata(i, mult, &nd.downacc[i])
+}
+func (nd *netData) GetU(i int, mult int) float32 {
+	return getnetdata(i, mult, &nd.upacc[i])
 }
