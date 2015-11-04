@@ -13,7 +13,7 @@ import "C"
 var pagesize int64
 var pae bool
 var kd C.kvm_t
-var swap_arr C.struct_kvm_swap
+var swapArr C.struct_kvm_swap
 
 func init() {
 	var err error
@@ -66,12 +66,12 @@ func (m *memData) Update() error {
 
 	err = nil
 
-	i, _ := C.kvm_getswapinfo(&kd, &swap_arr, C.int(1), C.int(0))
+	i, _ := C.kvm_getswapinfo(&kd, &swapArr, C.int(1), C.int(0))
 	if err != nil {
 		panic(err)
 	}
-	if i >= 0 && swap_arr.ksw_total != 0 {
-		m.swapUse = uint64(swap_arr.ksw_used) * uint64(pagesize)
+	if i >= 0 && swapArr.ksw_total != 0 {
+		m.swapUse = uint64(swapArr.ksw_used) * uint64(pagesize)
 	}
 	m.swapPercent = int(m.swapUse * 100 / m.swapTotal)
 

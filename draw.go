@@ -17,10 +17,10 @@ import (
 
 const (
 	mult  = 10
-	dtick = time.Second / 2 //refreshing interval
-	rtick = time.Second /60 //redrawint interval
-	atick = time.Second     //averaging interval
-	ptick = atick / mult    //polling interval
+	dtick = time.Second / 2  //refreshing interval
+	rtick = time.Second / 60 //redrawint interval
+	atick = time.Second      //averaging interval
+	ptick = atick / mult     //polling interval
 )
 
 func main() {
@@ -54,25 +54,8 @@ func main() {
 	}
 
 	gNet.Height = nd.size + 3
-	var m memData
 
-	go func() {
-		for {
-			err := m.Update()
-			if err != nil {
-				panic(err)
-			}
-
-			gMem.Percent = m.memPercent
-			gMem.Border.Label = fillfmt("Memory", m.memUse, m.memTotal)
-
-			gSwap.Percent = m.swapPercent
-			gSwap.Border.Label = fillfmt("Swap", m.swapUse, m.swapTotal)
-
-			gNet.Items = netf(nd)
-			time.Sleep(dtick)
-		}
-	}()
+	go dataupd(gMem, gSwap, gNet, nd)
 
 	ui.Body.AddRows(
 		ui.NewRow(
@@ -90,7 +73,7 @@ func main() {
 			}
 		case <-sig:
 			return
-		case <- tkr:
+		case <-tkr:
 			ui.Render(ui.Body)
 		}
 	}
@@ -114,6 +97,7 @@ func dealwithevents(e ui.Event) bool {
 	return false
 }
 
+// formatting and massaging net data into pretty tabs with units
 func netf(nd *netData) []string {
 	strings := make([]string, 0, nd.size+1)
 	var b bytes.Buffer
@@ -139,4 +123,25 @@ func netf(nd *netData) []string {
 		strings = append(strings, ts)
 	}
 	return strings
+}
+
+// Thus function updates data each dtick
+func dataupd(gMem, gSwap *ui.Gauge, gNet *ui.List, nd *netData) {
+
+	var m memData
+	for {
+		err := m.Update()
+		if err != nil {
+			panic(err)
+		}
+
+		gMem.Percent = m.memPercent
+		gMem.Border.Label = fillfmt("Memory", m.memUse, m.memTotal)
+
+		gSwap.Percent = m.swapPercent
+		gSwap.Border.Label = fillfmt("Swap", m.swapUse, m.swapTotal)
+
+		gNet.Items = netf(nd)
+		time.Sleep(dtick)
+	}
 }
