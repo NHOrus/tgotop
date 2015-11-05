@@ -47,7 +47,7 @@ func (nd *netData) setNetData(ifnum int, depth int) {
 	return
 }
 
-func (nd *netData) Init(depth int, rt time.Duration) error {
+func (nd *netData) Init(depth int, ptk <-chan time.Time) error {
 	noi, err := getifnum()
 
 	if err != nil {
@@ -63,12 +63,11 @@ func (nd *netData) Init(depth int, rt time.Duration) error {
 			select {
 			case <-nd.done:
 				return
-			default:
+			case <-ptk:
 				err = nd.Update()
 				if err != nil {
 					return
 				}
-				time.Sleep(rt)
 			}
 		}
 	}()

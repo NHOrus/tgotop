@@ -10,14 +10,13 @@ import (
 	//tm "github.com/nsf/termbox-go"
 	"os"
 	"os/signal"
-	"syscall"
 	"text/tabwriter"
 	"time"
 )
 
 const (
 	mult  = 10
-	dtick = time.Second / 2  //refreshing interval
+	dtick = time.Second / 2  //data update interval
 	rtick = time.Second / 60 //redrawint interval
 	atick = time.Second      //averaging interval
 	ptick = atick / mult     //polling interval
@@ -44,10 +43,14 @@ func main() {
 	//getting ready to close stuff on command
 	evt := ui.EventCh()
 	sig := make(chan os.Signal)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGABRT, syscall.SIGTERM)
+	signal.Notify(sig, os.Kill, os.Interrupt)
+
+	//initing tickers for polling and redrawing and updating data
+	rtk := time.Tick(rtick)
+	ptk := time.Tick(ptick)
 
 	nd := new(netData)
-	err = nd.Init(3*mult, ptick)
+	err = nd.Init(3*mult, ptk)
 
 	if err != nil {
 		panic(err)
@@ -64,7 +67,7 @@ func main() {
 		ui.NewRow(ui.NewCol(12, 0, qMess)))
 
 	ui.Body.Align()
-	tkr := time.Tick(rtick)
+
 	for {
 		select {
 		case e := <-evt:
@@ -73,7 +76,7 @@ func main() {
 			}
 		case <-sig:
 			return
-		case <-tkr:
+		case <-rtk:
 			ui.Render(ui.Body)
 		}
 	}
